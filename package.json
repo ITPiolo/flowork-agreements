@@ -9,12 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^149.0.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "docusign-esign": "^10.0.0",
     "next": "16.2.12",
+    "puppeteer-core": "^25.4.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "eslint": "^9",
-    "eslint-config-next": "16.2.12"
+    "eslint-config-next": "16.2.12",
+    "puppeteer": "^25.4.0"
   }
 }
