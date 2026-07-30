@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
 
-// GET /api/entities — lists entities with their active document templates, for the staff form.
-// Uses the service client because `entities`/`document_templates` are RLS-locked to `authenticated`
-// and this app has no staff login flow yet (see README "Known gaps").
+// GET /api/entities — lists entities with their active document templates.
+// Uses the signed-in staff member's session so RLS (staff_members entity scoping) applies:
+// operations.dubaihills@flowork.me only ever sees DH, operations.vt@flowork.me only VT.
 export async function GET() {
-  const supabase = getSupabaseServiceClient();
+  const supabase = await getSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
+  }
 
   const { data: entities, error: entitiesError } = await supabase
     .from('entities')

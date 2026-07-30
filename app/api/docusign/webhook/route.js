@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { getSupabaseServiceClient } from '@/lib/supabase/service';
 import { getEnvelopesApi } from '@/lib/docusign';
 
 // POST /api/docusign/webhook — DocuSign Connect delivery target.

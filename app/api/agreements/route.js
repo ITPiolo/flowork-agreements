@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getEnvelopesApi } from '@/lib/docusign';
 import { renderHtmlToPdf } from '@/lib/pdf';
 
@@ -22,16 +22,25 @@ export async function POST(request) {
     );
   }
 
-  const supabase = getSupabaseServiceClient();
+  const supabase = await getSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
+  }
 
   // Look up the entity so branding/address always comes from the DB, never the client request.
+  // RLS (staff_members) means this returns nothing if the signed-in staff member isn't scoped
+  // to this entity — e.g. operations.dubaihills@flowork.me requesting entityId=VT.
   const { data: entity, error: entityError } = await supabase
     .from('entities')
     .select('*')
     .eq('id', entityId)
     .single();
   if (entityError || !entity) {
-    return NextResponse.json({ ok: false, error: 'Unknown entity' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Unknown entity or not permitted' }, { status: 403 });
   }
 
   // Templates are scoped to this entity only — this is what prevents DH/VT cross-branding.

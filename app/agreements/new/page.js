@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import StaffNav from '@/app/components/StaffNav';
 
 const DOC_LABELS = { house_rules: 'House Rules', kyc: 'KYC Form' };
 
@@ -68,7 +69,9 @@ export default function NewAgreementPage() {
   }
 
   return (
-    <main style={{ maxWidth: 640, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' }}>
+    <>
+      <StaffNav />
+      <main style={{ maxWidth: 640, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' }}>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>New Client Agreement</h1>
       <p style={{ color: '#666', marginBottom: 24, fontSize: 14 }}>
         Select a location, pick the documents to send, and enter the client&apos;s details.
@@ -178,7 +181,8 @@ export default function NewAgreementPage() {
           </ul>
         </div>
       )}
-    </main>
+      </main>
+    </>
   );
 }
 
