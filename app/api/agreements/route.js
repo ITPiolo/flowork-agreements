@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getEnvelopesApi } from '@/lib/docusign';
 import { renderHtmlToPdf } from '@/lib/pdf';
+import { getFieldsForDocType, buildSignerTabs } from '@/lib/docusignFields';
+import { sendKycFormEmail } from '@/lib/email';
 
 const DOC_LABELS = { house_rules: 'House Rules', kyc: 'KYC Form' };
 
@@ -74,24 +76,55 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: clientError.message }, { status: 500 });
   }
 
-  const { envelopesApi, accountId } = await getEnvelopesApi();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
 
   const results = [];
   for (const template of templates) {
     try {
+      if (template.doc_type === 'kyc') {
+        // KYC is filled out by the client on our own web form (DocuSign's anchor-based tab
+        // placement proved too unreliable for a ~60-field form), then redirected straight into
+        // DocuSign for just the signature. See app/kyc-form/[id].
+        const { data: agreement, error: agreementError } = await supabase
+          .from('agreements')
+          .insert({
+            client_id: clientRow.id,
+            entity_id: entityId,
+            template_id: template.id,
+            doc_type: template.doc_type,
+            status: 'draft',
+          })
+          .select()
+          .single();
+        if (agreementError) throw new Error(agreementError.message);
+
+        const formUrl = `${origin}/kyc-form/${agreement.id}`;
+        await sendKycFormEmail({
+          locationCode: entity.location_code,
+          entityName: entity.name,
+          clientEmail: client.email,
+          clientContactName: client.contactName,
+          formUrl,
+        });
+
+        results.push({ docType: template.doc_type, agreementId: agreement.id, kycFormEmailed: true });
+        continue;
+      }
+
+      // Non-KYC documents (currently just House Rules): no client data entry needed, so the
+      // existing DocuSign anchor-based signature flow sends it immediately.
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('document-templates')
         .download(template.storage_path);
       if (downloadError) throw new Error(`Template download failed: ${downloadError.message}`);
 
       const html = await fileData.text();
-      // Templates render a "Signature:" / "Signature & Company stamp" label but carry no text
-      // DocuSign can anchor a tab to, so one is injected into the rendered DOM (see lib/pdf.js).
-      const pdfBuffer = await renderHtmlToPdf(html, {
-        anchorText: '/sig/',
-        anchorAfterPattern: /^Signature/,
-      });
+      const fields = getFieldsForDocType(template.doc_type);
+      const { pdfBuffer, placements } = await renderHtmlToPdf(html, { anchors: fields });
       const documentBase64 = pdfBuffer.toString('base64');
+      const tabs = buildSignerTabs(fields, placements);
+
+      const { envelopesApi, accountId } = await getEnvelopesApi();
 
       const envelopeDefinition = {
         emailSubject: `${entity.name} — ${DOC_LABELS[template.doc_type] ?? template.name} for signature`,
@@ -110,16 +143,7 @@ export async function POST(request) {
               name: client.contactName || client.companyName,
               recipientId: '1',
               routingOrder: '1',
-              tabs: {
-                signHereTabs: [
-                  {
-                    anchorString: '/sig/',
-                    anchorUnits: 'pixels',
-                    anchorXOffset: '0',
-                    anchorYOffset: '0',
-                  },
-                ],
-              },
+              tabs,
             },
           ],
         },

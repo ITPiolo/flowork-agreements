@@ -175,7 +175,13 @@ export default function NewAgreementPage() {
             {result.results.map((r) => (
               <li key={r.docType}>
                 {DOC_LABELS[r.docType] ?? r.docType}:{' '}
-                {r.error ? <span style={{ color: '#b00020' }}>{r.error}</span> : `envelope ${r.envelopeId}`}
+                {r.error ? (
+                  <span style={{ color: '#b00020' }}>{r.error}</span>
+                ) : r.kycFormEmailed ? (
+                  'KYC form emailed to client'
+                ) : (
+                  `envelope ${r.envelopeId}`
+                )}
               </li>
             ))}
           </ul>
