@@ -43,7 +43,7 @@ export default function KycFormPage({ params }) {
       const res = await fetch(`/api/kyc-form/${id}/upload`, { method: 'POST', body: formData });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Upload failed');
-      setUploads((u) => ({ ...u, [docId]: { status: 'done', filename: data.filename, path: data.path } }));
+      setUploads((u) => ({ ...u, [docId]: { status: 'done', filename: data.filename, path: data.path, uploadedAt: data.uploadedAt } }));
     } catch (err) {
       setUploads((u) => ({ ...u, [docId]: { status: 'error', filename: file.name, error: err.message } }));
     }
@@ -62,7 +62,7 @@ export default function KycFormPage({ params }) {
     try {
       const uploadedDocuments = Object.entries(uploads)
         .filter(([, u]) => u.status === 'done')
-        .map(([docId, u]) => ({ docId, path: u.path, filename: u.filename }));
+        .map(([docId, u]) => ({ docId, path: u.path, filename: u.filename, uploadedAt: u.uploadedAt }));
 
       const res = await fetch(`/api/kyc-form/${id}/submit`, {
         method: 'POST',

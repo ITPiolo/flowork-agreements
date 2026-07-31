@@ -12,7 +12,7 @@ export default function StaffNav() {
   return (
     <nav
       style={{
-        maxWidth: 800,
+        maxWidth: 900,
         margin: '0 auto',
         padding: '16px 20px 0',
         display: 'flex',
@@ -22,7 +22,8 @@ export default function StaffNav() {
       }}
     >
       <a href="/agreements/new">New Agreement</a>
-      <a href="/agreements/list">Signed Agreements</a>
+      <a href="/agreements/list">Agreements</a>
+      <a href="/admin/staff">Staff Access</a>
       <button
         onClick={handleSignOut}
         style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 14 }}

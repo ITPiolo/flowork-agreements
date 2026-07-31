@@ -43,7 +43,7 @@ export async function GET() {
           const { data: signed } = await supabase.storage
             .from('client-documents')
             .createSignedUrl(doc.path, 60 * 10);
-          return { filename: doc.filename, downloadUrl: signed?.signedUrl ?? null };
+          return { filename: doc.filename, downloadUrl: signed?.signedUrl ?? null, uploadedAt: doc.uploadedAt ?? null };
         })
       );
 

@@ -43,5 +43,5 @@ export async function POST(request, { params }) {
     return NextResponse.json({ ok: false, error: uploadError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, path: storagePath, filename: file.name });
+  return NextResponse.json({ ok: true, path: storagePath, filename: file.name, uploadedAt: new Date().toISOString() });
 }
