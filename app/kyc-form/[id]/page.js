@@ -10,6 +10,7 @@ export default function KycFormPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [values, setValues] = useState({});
+  const [uploads, setUploads] = useState({}); // { [docId]: { status, filename, path, error } }
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -33,15 +34,40 @@ export default function KycFormPage({ params }) {
     setValues((v) => ({ ...v, [fieldId]: value }));
   }
 
+  async function uploadFile(docId, file) {
+    setUploads((u) => ({ ...u, [docId]: { status: 'uploading', filename: file.name } }));
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('docId', docId);
+      const res = await fetch(`/api/kyc-form/${id}/upload`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Upload failed');
+      setUploads((u) => ({ ...u, [docId]: { status: 'done', filename: data.filename, path: data.path } }));
+    } catch (err) {
+      setUploads((u) => ({ ...u, [docId]: { status: 'error', filename: file.name, error: err.message } }));
+    }
+  }
+
+  const hasAtLeastOneUpload = Object.values(uploads).some((u) => u.status === 'done');
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitError('');
+    if (!hasAtLeastOneUpload) {
+      setSubmitError('Please attach at least one document before submitting.');
+      return;
+    }
     setSubmitting(true);
     try {
+      const uploadedDocuments = Object.entries(uploads)
+        .filter(([, u]) => u.status === 'done')
+        .map(([docId, u]) => ({ docId, path: u.path, filename: u.filename }));
+
       const res = await fetch(`/api/kyc-form/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values }),
+        body: JSON.stringify({ values, uploadedDocuments }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Submission failed');
@@ -68,7 +94,14 @@ export default function KycFormPage({ params }) {
             <legend style={{ fontWeight: 600, fontSize: 14 }}>{section.title}</legend>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
               {section.fields.map((field) => (
-                <FieldRow key={field.id} field={field} values={values} setValue={setValue} />
+                <FieldRow
+                  key={field.id}
+                  field={field}
+                  values={values}
+                  setValue={setValue}
+                  uploads={uploads}
+                  uploadFile={uploadFile}
+                />
               ))}
             </div>
           </fieldset>
@@ -96,7 +129,7 @@ export default function KycFormPage({ params }) {
   );
 }
 
-function FieldRow({ field, values, setValue }) {
+function FieldRow({ field, values, setValue, uploads, uploadFile }) {
   const labelStyle = { fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 4 };
   const inputStyle = { width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' };
 
@@ -143,22 +176,51 @@ function FieldRow({ field, values, setValue }) {
     return (
       <div>
         <span style={labelStyle}>{field.label}</span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {field.options.map((opt) => (
-            <label key={opt.id} style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={!!values[opt.id]}
-                onChange={(e) => setValue(opt.id, e.target.checked)}
-              />
-              {opt.label}
-            </label>
+            <div key={opt.id}>
+              <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={!!values[opt.id]}
+                  onChange={(e) => setValue(opt.id, e.target.checked)}
+                />
+                {opt.label}
+              </label>
+              {field.allowUpload && values[opt.id] && (
+                <div style={{ marginLeft: 24, marginTop: 4 }}>
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadFile(opt.id, file);
+                    }}
+                    style={{ fontSize: 12 }}
+                  />
+                  <UploadStatus upload={uploads[opt.id]} />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
     );
   }
 
+  return null;
+}
+
+function UploadStatus({ upload }) {
+  if (!upload) return null;
+  if (upload.status === 'uploading') {
+    return <span style={{ fontSize: 12, color: '#666', marginLeft: 8 }}>Uploading {upload.filename}…</span>;
+  }
+  if (upload.status === 'done') {
+    return <span style={{ fontSize: 12, color: '#2B3227', marginLeft: 8 }}>✓ {upload.filename} attached</span>;
+  }
+  if (upload.status === 'error') {
+    return <span style={{ fontSize: 12, color: '#b00020', marginLeft: 8 }}>Failed: {upload.error}</span>;
+  }
   return null;
 }
 

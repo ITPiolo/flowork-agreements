@@ -48,6 +48,7 @@ export async function POST(request, { params }) {
   }
 
   const values = normalizeValues(body.values || {});
+  const uploadedDocuments = Array.isArray(body.uploadedDocuments) ? body.uploadedDocuments : [];
 
   const { data: fileData, error: downloadError } = await supabase.storage
     .from('document-templates')
@@ -131,7 +132,7 @@ export async function POST(request, { params }) {
       status: 'sent',
       docusign_envelope_id: envelopeSummary.envelopeId,
       sent_at: new Date().toISOString(),
-      fields: values,
+      fields: { ...values, _uploadedDocuments: uploadedDocuments },
     })
     .eq('id', id);
 
