@@ -60,11 +60,14 @@ export async function POST(request, { params }) {
 
   const kycFields = getFieldsForDocType('kyc');
   const signatureField = kycFields.find((f) => f.tab.type === 'sign');
-  const dataFields = kycFields.filter((f) => f.tab.type !== 'sign');
+  // The date next to the signature is filled in by DocuSign automatically when the client
+  // signs (dateSignedTabs below) — it's not something the web form asks the client to type.
+  const dateField = kycFields.find((f) => f.id === 'signer_date');
+  const dataFields = kycFields.filter((f) => f.tab.type !== 'sign' && f.id !== 'signer_date');
 
   let pdfBuffer;
   try {
-    ({ pdfBuffer } = await renderFilledPdf(html, dataFields, values, { signatureField }));
+    ({ pdfBuffer } = await renderFilledPdf(html, dataFields, values, { signatureField, dateField }));
   } catch (err) {
     return NextResponse.json({ ok: false, error: `PDF generation failed: ${err.message}` }, { status: 500 });
   }
@@ -96,6 +99,9 @@ export async function POST(request, { params }) {
               tabs: {
                 signHereTabs: [
                   { anchorString: signatureField.id, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0' },
+                ],
+                dateSignedTabs: [
+                  { anchorString: dateField.id, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0' },
                 ],
               },
             },

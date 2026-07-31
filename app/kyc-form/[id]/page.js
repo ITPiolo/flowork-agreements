@@ -109,6 +109,11 @@ export default function KycFormPage({ params }) {
 
         {submitError && <p style={{ color: '#b00020' }}>{submitError}</p>}
 
+        <p style={{ fontSize: 13, color: '#666', background: '#f4f6f2', padding: 12, borderRadius: 6 }}>
+          Once you click below, you&apos;ll be taken straight to DocuSign to review and sign the completed document
+          &mdash; no separate email needed.
+        </p>
+
         <button
           type="submit"
           disabled={submitting}
