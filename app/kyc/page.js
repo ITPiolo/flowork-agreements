@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, use as usePromise } from 'react';
+import { useState } from 'react';
 
-export default function PublicKycStartPage({ params }) {
-  const { location } = usePromise(params);
-
+export default function PublicKycStartPage() {
+  const [location, setLocation] = useState('DH');
   const [companyName, setCompanyName] = useState('');
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,6 +40,13 @@ export default function PublicKycStartPage({ params }) {
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <label>
+          <span style={labelStyle}>Flowork Location *</span>
+          <select style={inputStyle} required value={location} onChange={(e) => setLocation(e.target.value)}>
+            <option value="DH">Dubai Hills</option>
+            <option value="VT">Vision Tower</option>
+          </select>
+        </label>
         <label>
           <span style={labelStyle}>Company Name *</span>
           <input style={inputStyle} required value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
