@@ -49,7 +49,8 @@ export default function KycFormPage({ params }) {
     }
   }
 
-  const hasAtLeastOneUpload = Object.values(uploads).some((u) => u.status === 'done');
+  const hasAtLeastOneUpload = Object.entries(uploads).some(([docId, u]) => docId !== 'company_stamp' && u.status === 'done');
+  const stampUploaded = uploads.company_stamp?.status === 'done';
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -58,16 +59,20 @@ export default function KycFormPage({ params }) {
       setSubmitError('Please attach at least one document before submitting.');
       return;
     }
+    if (!stampUploaded) {
+      setSubmitError('Please upload your company stamp before submitting.');
+      return;
+    }
     setSubmitting(true);
     try {
       const uploadedDocuments = Object.entries(uploads)
-        .filter(([, u]) => u.status === 'done')
+        .filter(([docId, u]) => docId !== 'company_stamp' && u.status === 'done')
         .map(([docId, u]) => ({ docId, path: u.path, filename: u.filename, uploadedAt: u.uploadedAt }));
 
       const res = await fetch(`/api/kyc-form/${id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values, uploadedDocuments }),
+        body: JSON.stringify({ values, uploadedDocuments, stampDocumentPath: uploads.company_stamp?.path }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Submission failed');
@@ -174,6 +179,27 @@ function FieldRow({ field, values, setValue, uploads, uploadFile }) {
           ))}
         </div>
       </div>
+    );
+  }
+
+  if (field.type === 'stampUpload') {
+    return (
+      <label>
+        <span style={labelStyle}>
+          {field.label}
+          {field.required && ' *'}
+        </span>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadFile(field.id, file);
+          }}
+          style={{ fontSize: 13 }}
+        />
+        <UploadStatus upload={uploads[field.id]} />
+      </label>
     );
   }
 

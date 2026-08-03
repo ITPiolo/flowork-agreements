@@ -21,6 +21,9 @@ export async function POST(request, { params }) {
   if (agreement.status !== 'draft') {
     return NextResponse.json({ ok: false, error: 'This form has already been submitted.' }, { status: 409 });
   }
+  if (!body.stampDocumentPath) {
+    return NextResponse.json({ ok: false, error: 'Please upload your company stamp before submitting.' }, { status: 400 });
+  }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
 
@@ -33,6 +36,7 @@ export async function POST(request, { params }) {
       templateStoragePath: agreement.document_templates.storage_path,
       rawValues: body.values,
       uploadedDocuments: body.uploadedDocuments,
+      stampDocumentPath: body.stampDocumentPath,
       origin,
       returnPath: '/kyc-form/complete',
     });
