@@ -136,7 +136,7 @@ export async function POST(request) {
       const tabs = {
         signHereTabs: [{
           anchorString: signatureField.id, anchorUnits: 'pixels',
-          anchorXOffset: '4', anchorYOffset: '0', width: '50', height: '16', anchorIgnoreIfNotPresent: 'false',
+          anchorXOffset: '0', anchorYOffset: '-14', width: '50', height: '16', anchorIgnoreIfNotPresent: 'false',
         }],
         dateSignedTabs: [{
           anchorString: dateField.id, anchorUnits: 'pixels',
