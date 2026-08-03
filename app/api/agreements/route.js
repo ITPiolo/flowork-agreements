@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getEnvelopesApi } from '@/lib/docusign';
-import { renderHtmlToPdf } from '@/lib/pdf';
-import { getFieldsForDocType, buildSignerTabs } from '@/lib/docusignFields';
+import { renderFilledPdf } from '@/lib/pdf';
+import { getFieldsForDocType } from '@/lib/docusignFields';
 import { sendKycFormEmail } from '@/lib/email';
 
 const DOC_LABELS = { house_rules: 'House Rules', kyc: 'KYC Form' };
@@ -120,9 +120,17 @@ export async function POST(request) {
 
       const html = await fileData.text();
       const fields = getFieldsForDocType(template.doc_type);
-      const { pdfBuffer, placements } = await renderHtmlToPdf(html, { anchors: fields });
+      const signatureField = fields.find((f) => f.tab.type === 'sign');
+      const dateField = fields.find((f) => f.id === 'house_rules_date');
+      const dataFields = fields.filter((f) => f.tab.type !== 'sign' && f.id !== 'house_rules_date');
+      const values = { house_rules_company_name: client.companyName || '' };
+
+      const { pdfBuffer } = await renderFilledPdf(html, dataFields, values, { signatureField, dateField });
       const documentBase64 = pdfBuffer.toString('base64');
-      const tabs = buildSignerTabs(fields, placements);
+      const tabs = {
+        signHereTabs: [{ anchorString: signatureField.id, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0' }],
+        dateSignedTabs: [{ anchorString: dateField.id, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0' }],
+      };
 
       const { envelopesApi, accountId } = await getEnvelopesApi();
 
