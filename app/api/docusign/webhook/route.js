@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseServiceClient } from '@/lib/supabase/service';
 import { getEnvelopesApi } from '@/lib/docusign';
+import { sendCompletionNotificationEmail } from '@/lib/email';
+
+const DOC_TYPE_LABELS = { kyc: 'KYC Form', house_rules: 'House Rules' };
 
 // POST /api/docusign/webhook — DocuSign Connect delivery target.
 // The incoming payload is only used to learn *which* envelope changed; the actual status and
@@ -33,7 +36,7 @@ export async function POST(request) {
 
   const { data: agreement, error: agreementError } = await supabase
     .from('agreements')
-    .select('*')
+    .select('*, entities(name, location_code), clients(company_name, contact_name)')
     .eq('docusign_envelope_id', envelopeId)
     .single();
   if (agreementError || !agreement) {
@@ -73,6 +76,33 @@ export async function POST(request) {
     .eq('id', agreement.id);
   if (updateError) {
     return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
+  }
+
+  // Best-effort: a notification failure shouldn't fail the webhook (DocuSign would retry
+  // delivery, re-downloading and re-uploading the same signed PDF unnecessarily).
+  try {
+    const uploadedDocuments = agreement.fields?._uploadedDocuments || [];
+    const attachments = [];
+    for (const doc of uploadedDocuments) {
+      const { data: fileData, error: dlError } = await supabase.storage
+        .from('client-documents')
+        .download(doc.path);
+      if (dlError || !fileData) continue;
+      attachments.push({ filename: doc.filename, content: Buffer.from(await fileData.arrayBuffer()) });
+    }
+
+    await sendCompletionNotificationEmail({
+      locationCode: agreement.entities?.location_code,
+      entityName: agreement.entities?.name,
+      docTypeLabel: DOC_TYPE_LABELS[agreement.doc_type] || agreement.doc_type,
+      clientCompanyName: agreement.clients?.company_name,
+      clientContactName: agreement.clients?.contact_name,
+      signedPdfBuffer: Buffer.from(signedPdf),
+      signedPdfFilename: `${DOC_TYPE_LABELS[agreement.doc_type] || agreement.doc_type} - ${agreement.clients?.company_name || 'signed'}.pdf`,
+      attachments,
+    });
+  } catch (err) {
+    console.error('Completion notification email failed:', err.message || err);
   }
 
   return NextResponse.json({ ok: true, agreementId: agreement.id, storagePath });
