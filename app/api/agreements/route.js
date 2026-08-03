@@ -122,14 +122,33 @@ export async function POST(request) {
       const fields = getFieldsForDocType(template.doc_type);
       const signatureField = fields.find((f) => f.tab.type === 'sign');
       const dateField = fields.find((f) => f.id === 'house_rules_date');
-      const dataFields = fields.filter((f) => f.tab.type !== 'sign' && f.id !== 'house_rules_date');
-      const values = { house_rules_company_name: client.companyName || '' };
+      const companyNameField = fields.find((f) => f.id === 'house_rules_company_name');
 
-      const { pdfBuffer } = await renderFilledPdf(html, dataFields, values, { signatureField, dateField });
+      const { pdfBuffer } = await renderFilledPdf(html, [], {}, {
+        signatureField,
+        dateField,
+        extraAnchorFields: [companyNameField],
+      });
       const documentBase64 = pdfBuffer.toString('base64');
+      // Explicit size + a small downward nudge past the anchor point — DocuSign's default tab
+      // has no set dimensions, and its rendered UI affordance is tall enough to bleed upward
+      // into the label sitting just above the blank line when there's little clearance.
       const tabs = {
-        signHereTabs: [{ anchorString: signatureField.id, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0' }],
-        dateSignedTabs: [{ anchorString: dateField.id, anchorUnits: 'pixels', anchorXOffset: '0', anchorYOffset: '0' }],
+        signHereTabs: [{
+          anchorString: signatureField.id, anchorUnits: 'pixels',
+          anchorXOffset: '0', anchorYOffset: '6', width: '50', height: '20', anchorIgnoreIfNotPresent: 'false',
+        }],
+        dateSignedTabs: [{
+          anchorString: dateField.id, anchorUnits: 'pixels',
+          anchorXOffset: '0', anchorYOffset: '6', width: '120', height: '16', anchorIgnoreIfNotPresent: 'false',
+        }],
+        textTabs: [{
+          anchorString: companyNameField.id, anchorUnits: 'pixels',
+          anchorXOffset: '0', anchorYOffset: '6', width: '150', height: '16', anchorIgnoreIfNotPresent: 'false',
+          tabLabel: companyNameField.tab.tabLabel,
+          value: client.companyName || '',
+          required: 'true',
+        }],
       };
 
       const { envelopesApi, accountId } = await getEnvelopesApi();

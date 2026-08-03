@@ -50,17 +50,12 @@ export default function KycFormPage({ params }) {
   }
 
   const hasAtLeastOneUpload = Object.entries(uploads).some(([docId, u]) => docId !== 'company_stamp' && u.status === 'done');
-  const stampUploaded = uploads.company_stamp?.status === 'done';
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitError('');
     if (!hasAtLeastOneUpload) {
       setSubmitError('Please attach at least one document before submitting.');
-      return;
-    }
-    if (!stampUploaded) {
-      setSubmitError('Please upload your company stamp before submitting.');
       return;
     }
     setSubmitting(true);
@@ -116,7 +111,7 @@ export default function KycFormPage({ params }) {
 
         <p style={{ fontSize: 13, color: '#666', background: '#f4f6f2', padding: 12, borderRadius: 6 }}>
           Once you click below, you&apos;ll be taken straight to DocuSign to review and sign the completed document
-          &mdash; no separate email needed.
+          &mdash; no separate email needed. DocuSign will ask you to attach your company stamp there before you can finish.
         </p>
 
         <button
