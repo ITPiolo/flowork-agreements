@@ -136,15 +136,15 @@ export async function POST(request) {
       const tabs = {
         signHereTabs: [{
           anchorString: signatureField.id, anchorUnits: 'pixels',
-          anchorXOffset: '0', anchorYOffset: '2', width: '50', height: '20', anchorIgnoreIfNotPresent: 'false',
+          anchorXOffset: '0', anchorYOffset: '-18', width: '50', height: '20', anchorIgnoreIfNotPresent: 'false',
         }],
         dateSignedTabs: [{
           anchorString: dateField.id, anchorUnits: 'pixels',
-          anchorXOffset: '0', anchorYOffset: '2', width: '120', height: '16', anchorIgnoreIfNotPresent: 'false',
+          anchorXOffset: '0', anchorYOffset: '-14', width: '120', height: '16', anchorIgnoreIfNotPresent: 'false',
         }],
         textTabs: [{
           anchorString: companyNameField.id, anchorUnits: 'pixels',
-          anchorXOffset: '0', anchorYOffset: '2', width: '150', height: '16', anchorIgnoreIfNotPresent: 'false',
+          anchorXOffset: '0', anchorYOffset: '-14', width: '150', height: '16', anchorIgnoreIfNotPresent: 'false',
           tabLabel: companyNameField.tab.tabLabel,
           value: client.companyName || '',
           required: 'true',
